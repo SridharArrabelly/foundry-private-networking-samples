@@ -1,0 +1,4 @@
+.azure/
+*.bicepparam
+.DS_Store
+Thumbs.db
