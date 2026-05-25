@@ -1,91 +1,82 @@
-# Foundry Private Networking — Samples
+# Foundry Private Networking Samples
 
-Two reference implementations of **private networking for Azure AI Foundry Agents**. Pick the one that matches your scenario; **both are fully supported by Microsoft going forward**.
+Two deployable reference implementations for private networking with Azure AI Foundry Agents.
 
-| | **Managed VNet** | **BYO VNet (Delegated Subnet)** |
+Use this repo as the **decision hub**. Start here, choose the right flavor for your scenario, then go to the child repo for deployment.
+
+## Choose your flavor
+
+| Option | [Managed VNet](https://github.com/SridharArrabelly/foundry-private-managed-vnet) | [BYO VNet (Delegated Subnet)](https://github.com/SridharArrabelly/foundry-private-byo-vnet) |
 |---|---|---|
-| **Repo** | 👉 [foundry-private-managed-vnet](https://github.com/SridharArrabelly/foundry-private-managed-vnet) | 👉 [foundry-private-byo-vnet](https://github.com/SridharArrabelly/foundry-private-byo-vnet) |
-| **Agent compute location** | Microsoft-managed VNet (invisible to you) | **Your** VNet, in a delegated subnet (`Microsoft.App/environments`) |
-| **Agent types supported** | Hosted + Prompt | Hosted + Prompt |
-| **Outbound network plumbing** | Foundry-managed PEs from MS VNet → your VNet | Single-tenant Data Proxy in your delegated subnet |
-| **Subnet IP planning** | Not required | **Required** — `/24` recommended, `/26` minimum for 50 concurrent sessions |
-| **BYO Cosmos + Storage + AI Search** | ✅ Mandatory | ✅ Mandatory |
-| **capabilityHost binding** | ✅ Required | ✅ Required |
-| **Private endpoints on data resources** | ✅ Plus Foundry auto-creates a 2nd PE | ✅ You create them yourself (no auto-create) |
-| **Jumpbox + Bastion for portal access** | ✅ Included | ✅ Included |
-| **Operational complexity** | Lower — no IP budget to manage | Higher — IP exhaustion is a real risk under load |
-| **Network audit clarity** | Lower — traffic from MS VNet is opaque | Higher — every IP and flow is in your VNet |
-| **Best for** | Most production workloads; default starting point | Highly regulated industries (banking, government, healthcare) that require agent compute IPs in the customer VNet |
+| Agent compute location | Microsoft-managed VNet | Your VNet, in a delegated subnet |
+| Best for | Most production workloads | Highly regulated workloads that require agent IPs inside the customer VNet |
+| Agent types | Standard Agent | Hosted agents and Prompt agents |
+| Network planning | Simpler, no subnet sizing | Requires delegated subnet and IP planning |
+| Audit visibility | Lower, compute is Microsoft-managed | Higher, flows and IPs are visible in your VNet controls |
+| Operational complexity | Lower | Higher |
 
 ## Which one should I use?
 
-Walk through these questions in order. Stop at the first **Yes**.
+Walk through these in order. Stop at the first **Yes**.
 
-1. **Does compliance require agent compute IPs to live in our own VNet, or that all agent traffic be auditable at the customer's NSG/Firewall?**
-   → **BYO VNet.** No way around it. If SecOps demands all outbound traffic flow through an Azure Firewall / NVA with FQDN allowlists, only BYO gives you that — Managed VNet's egress is opaque and not routable through your firewall.
+1. **Do you need agent compute to live inside the customer VNet?** If yes, choose **BYO VNet**.
+2. **Do you need agent traffic to be visible in the customer's NSG or firewall logs?** If yes, choose **BYO VNet**.
+3. **Do you need Hosted agents or custom container images?** If yes, choose **BYO VNet**.
+4. **Do downstream systems need explicit agent IP allow-listing?** If yes, choose **BYO VNet**.
+5. **Do you want the simplest private setup with the fewest moving parts?** If yes, choose **Managed VNet**.
 
-2. **Do we need to allow-list specific agent IPs at downstream firewalls (legacy PaaS, on-prem systems via ExpressRoute), or call any non-Azure-native backend privately (internal API behind a PE, on-prem service)?**
-   → **BYO VNet.** Managed VNet IPs are dynamic and not exposed, and its hidden VNet isn't peered with yours — so it can't reach anything in your hub-spoke topology, your ExpressRoute, or your private endpoints to non-Foundry resources.
+If none of the first four apply, start with **Managed VNet**.
 
-3. **Will agents have very high concurrency (>50 sessions/region) AND we want predictable scaling without hitting platform-side limits?**
-   → **BYO VNet** with a `/24` subnet. The platform supports up to 50 concurrent sessions per subscription per region; sizing your own subnet gives explicit IP headroom for revisions and upgrades.
+## What is shared across both samples?
 
-4. **Do we need Hosted agents (custom container images via our own ACR)?**
-   → **BYO VNet.** Hosted agents only ship on the delegated-subnet model.
+Both samples share the same private data-layer pattern:
 
-5. **Otherwise (most cases): is "private endpoints on data + no public Foundry endpoint" enough?**
-   → **Managed VNet.** Simpler to reason about, no subnet sizing, fewer moving parts.
+- BYO **Cosmos DB** for thread state
+- BYO **Storage** for files and agent directories
+- BYO **AI Search** for retrieval / vector store
+- **capabilityHost** binds those resources to the agent runtime
+- The templates are **azd-deployable**
 
-If you answered **No** to 1-4 and **Yes** to 5, start with [Managed VNet](https://github.com/SridharArrabelly/foundry-private-managed-vnet). You can migrate later — the data layer (Cosmos/Storage/Search + capabilityHost + RBAC + DNS zones) is identical between the two, so the work isn't thrown away.
+See [Shared data plane](./docs/shared-data-plane.md) for the full picture.
 
-## What's the same between them
+## Repos
 
-Both repos share the same **data layer + RBAC chain**:
+### Managed VNet
+Recommended starting point for most private-networking scenarios.
 
-- BYO Cosmos DB (thread state) + Storage (file/agent dirs) + AI Search (vector store)
-- All four data resources have `publicNetworkAccess: Disabled` and a private endpoint in your VNet
-- Private DNS zones: `privatelink.cognitiveservices.azure.com`, `privatelink.openai.azure.com`, `privatelink.services.ai.azure.com`, `privatelink.documents.azure.com`, `privatelink.blob.core.windows.net`, `privatelink.search.windows.net`
-- Project `capabilityHost` binds the three BYO connections to the agent runtime (this is non-negotiable platform requirement)
-- Two-phase RBAC: pre-caphost roles (Storage Blob Data Contributor, Cosmos DB Operator, Search Index/Service Contributor) → capabilityHost provisions → post-caphost roles (Storage Blob Data Owner with ABAC condition on `*-azureml-agent`, Cosmos SQL Built-in Data Contributor)
-- Windows jumpbox + Azure Bastion for accessing the private Foundry portal
+- Repo: [foundry-private-managed-vnet](https://github.com/SridharArrabelly/foundry-private-managed-vnet)
+- Pattern: Managed VNet + Standard Agent + capabilityHost
+- Use this when private data access is required, but you do not need agent compute inside your own VNet
 
-## What's different
+### BYO VNet
+Use this when agent compute must run inside the customer VNet.
 
-The **network injection layer** is the only thing that changes:
+- Repo: [foundry-private-byo-vnet](https://github.com/SridharArrabelly/foundry-private-byo-vnet)
+- Pattern: BYO VNet + delegated subnet + Data Proxy + Hosted/Prompt agents
+- Use this for highly regulated environments, IP allow-listing scenarios, or customer-owned traffic visibility
 
-| Concern | Managed VNet | BYO VNet |
-|---|---|---|
-| Foundry account `networkInjections` property | Not set (or `Managed`) | Set to subnet IDs + `Microsoft.App/environments` delegation |
-| Customer subnet for agent compute | None — Foundry's own VNet | `/24` recommended, delegated to `Microsoft.App/environments` |
-| Auto-created managed PEs | Foundry creates them into your VNet from its hidden VNet (you approve via auto-approver role) | None — you create all PEs yourself |
-| Data Proxy | None | One per project, runs in your delegated subnet |
-| IP budget consumed in your VNet | Just PEs (1 IP each) | PEs + Data Proxy (~1 IP per 10 pods) + Hosted agent Micro VMs (~1 IP each + revisions) |
+## Architecture
 
-## Concrete triggers — when each one is the only right answer
+See the architecture pages for side-by-side visuals and deeper explanation.
 
-If any of these describes your environment, the choice is already made for you:
+- [Managed VNet architecture](./docs/architecture-diagrams/managed-vnet.md)
+- [BYO VNet architecture](./docs/architecture-diagrams/byo-vnet.md)
+- [Side-by-side comparison](./docs/architecture-diagrams/side-by-side.md)
 
-**Pick BYO VNet if:**
-- The agent has **custom function tools that call your own internal API** behind a private endpoint, or on-prem via ExpressRoute. Managed VNet can't reach those — its hidden VNet isn't peered with yours.
-- Compliance / SecOps requires **all outbound traffic flow through Azure Firewall or an NVA** with FQDN-based allowlists. Managed VNet's egress is governed by Microsoft's allowed-outbound list, not yours.
-- You need **end-to-end network observability** — NSG flow logs, packet captures, Network Watcher diagnostics on the agent traffic itself.
-- You already operate a **hub-spoke landing zone** and the agent is "just another workload" that drops into a spoke alongside your apps, Bastion, jumpboxes.
-- You need a **Private DNS Resolver / corporate DNS forwarder** in the agent's resolution path (e.g., split-horizon DNS with on-prem zones).
+## Deep docs
 
-**Pick Managed VNet if:**
-- The agent only ever calls **Azure-native backends** that Microsoft can reach via its auto-created PEs — your BYO Cosmos / Storage / Search, plus Azure OpenAI.
-- You want the **lowest operational burden** — no subnet sizing, no delegation, no NAT Gateway, no NSG rules to tune.
-- You're OK with **Microsoft owning the agent VNet** and treating that runtime as a black box you can't `tcpdump`.
+Use these for implementation detail that is shared across both repos:
 
-**Rule of thumb:** *if the agent needs to call anything in your own network, pick BYO; if it only talks to Azure-native data services, pick Managed.* Most regulated-industry production deployments (banking, healthcare, government) end up on BYO because of trigger #2 above. Most internal POCs and SaaS-style workloads pick Managed.
+- [Shared data plane](./docs/shared-data-plane.md)
+- [capabilityHost, RBAC, and DNS](./docs/capabilityhost-rbac-dns.md)
+- [Validation checklist](./docs/validation-checklist.md)
+- [Known limitations](./docs/known-limitations.md)
 
-## Where to start
+## Why this repo family exists
 
-- **Most clients:** [foundry-private-managed-vnet](https://github.com/SridharArrabelly/foundry-private-managed-vnet) — battle-tested baseline, end-to-end-deploy validated. Has a deep "Understanding the design" section that's worth reading before any troubleshooting call.
-- **Regulated clients:** [foundry-private-byo-vnet](https://github.com/SridharArrabelly/foundry-private-byo-vnet) — baseline implementation derived from the [Foundry networking deep-dive](https://learn.microsoft.com/azure/foundry/agents/concepts/agents-networking-deep-dive) and [virtual-networks how-to](https://learn.microsoft.com/azure/foundry/agents/how-to/virtual-networks).
+These samples are meant to be practical references you can use to:
 
-## References
-
-- [Foundry Agent Service — Set up private networking](https://learn.microsoft.com/azure/foundry/agents/how-to/virtual-networks?tabs=portal) (BYO requirements + step-by-step)
-- [Foundry Agent Service — Networking deep-dive](https://learn.microsoft.com/azure/foundry/agents/concepts/agents-networking-deep-dive) (subnet sizing, IP allocation, Hosted vs Prompt agent traffic flows)
-- [Microsoft sample 18 — Managed VNet + BYO data layer](https://github.com/Azure-Samples/azure-ai-agents) (origin of the Managed VNet pattern)
+- Validate a customer's private-networking design
+- Show the difference between Managed VNet and BYO VNet clearly
+- Give teams a starting point they can adapt into production
+- Reduce time spent re-explaining the same networking patterns in every engagement
