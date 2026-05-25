@@ -6,7 +6,7 @@ Two reference implementations of **private networking for Azure AI Foundry Agent
 |---|---|---|
 | **Repo** | 👉 [foundry-private-managed-vnet](https://github.com/SridharArrabelly/foundry-private-managed-vnet) | 👉 [foundry-private-byo-vnet](https://github.com/SridharArrabelly/foundry-private-byo-vnet) |
 | **Agent compute location** | Microsoft-managed VNet (invisible to you) | **Your** VNet, in a delegated subnet (`Microsoft.App/environments`) |
-| **Agent types** | Standard Agent | Hosted agent (your container) + Prompt agent (MS-managed) |
+| **Agent types supported** | Hosted + Prompt | Hosted + Prompt |
 | **Outbound network plumbing** | Foundry-managed PEs from MS VNet → your VNet | Single-tenant Data Proxy in your delegated subnet |
 | **Subnet IP planning** | Not required | **Required** — `/24` recommended, `/26` minimum for 50 concurrent sessions |
 | **BYO Cosmos + Storage + AI Search** | ✅ Mandatory | ✅ Mandatory |
@@ -70,4 +70,4 @@ The **network injection layer** is the only thing that changes:
 
 - [Foundry Agent Service — Set up private networking](https://learn.microsoft.com/azure/foundry/agents/how-to/virtual-networks?tabs=portal) (BYO requirements + step-by-step)
 - [Foundry Agent Service — Networking deep-dive](https://learn.microsoft.com/azure/foundry/agents/concepts/agents-networking-deep-dive) (subnet sizing, IP allocation, Hosted vs Prompt agent traffic flows)
-- [Microsoft sample 18 — Standard Agent + Managed VNet](https://github.com/Azure-Samples/azure-ai-agents) (origin of the Managed VNet pattern)
+- [Microsoft sample 18 — Managed VNet + BYO data layer](https://github.com/Azure-Samples/azure-ai-agents) (origin of the Managed VNet pattern)
