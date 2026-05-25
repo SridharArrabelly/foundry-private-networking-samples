@@ -61,6 +61,38 @@ The **network injection layer** is the only thing that changes:
 | Data Proxy | None | One per project, runs in your delegated subnet |
 | IP budget consumed in your VNet | Just PEs (1 IP each) | PEs + Data Proxy (~1 IP per 10 pods) + Hosted agent Micro VMs (~1 IP each + revisions) |
 
+### Side-by-side
+
+```mermaid
+flowchart LR
+  subgraph MANAGED["🟪 Managed VNet flavor"]
+    direction TB
+    M_YOU(("You")) --> M_VM[Jumpbox]:::yours
+    M_VM -->|your PE| M_FND[Foundry account]:::yours
+    subgraph M_MS["MS-managed VNet (hidden)"]
+      M_AGENT["Agent runtime"]:::msft
+    end
+    M_AGENT -->|managed PE| M_DATA[Cosmos · Storage · Search]:::yours
+    M_VM -->|your PEs| M_DATA
+  end
+
+  subgraph BYO["🟦 BYO VNet flavor"]
+    direction TB
+    B_YOU(("You")) --> B_VM[Jumpbox]:::yours
+    B_VM -->|your PE| B_FND[Foundry account]:::yours
+    subgraph B_AGSUB["snet-agent (your VNet, delegated)"]
+      B_AGENT["Agent runtime<br/>(in YOUR subnet)"]:::yours
+    end
+    B_AGENT -->|same PE as jumpbox uses| B_DATA[Cosmos · Storage · Search]:::yours
+    B_VM -->|your PEs| B_DATA
+  end
+
+  classDef yours fill:#dbeafe,stroke:#1e3a8a,color:#000
+  classDef msft fill:#ede9fe,stroke:#5b21b6,color:#000
+```
+
+**Visual takeaway:** the boxes labelled "Cosmos · Storage · Search" are *yours* in both flavors — that part doesn't change. What moves is the **agent runtime**: in Managed it lives in Microsoft's hidden VNet (purple) and reaches your data via *its own* managed PEs; in BYO it lives in your delegated subnet (blue) and reuses the *same* PEs as your jumpbox.
+
 ## Concrete triggers — when each one is the only right answer
 
 If any of these describes your environment, the choice is already made for you:
