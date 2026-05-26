@@ -29,7 +29,7 @@ The practical consequence: **the moment you decide you want any one BYO data res
 
 ---
 
-## What happens if you skip capabilityHost
+## 2. What happens if you skip capabilityHost
 
 This is the single most common silently-failing scenario in private Foundry deployments.
 
@@ -63,7 +63,7 @@ Without `capabilityHost`, none of that happens — and the agent runtime falls b
 
 ---
 
-## 2. Why are there two completely separate PE paths to the same backend resources?
+## 3. Why are there two completely separate PE paths to the same backend resources?
 
 A private Managed VNet deployment ends up with what looks like duplicate private endpoints — your `pep-…-cosmos` in your VNet, **and** a managed PE to the same Cosmos account from Microsoft's side. The same for Storage and Search.
 
@@ -84,7 +84,7 @@ See the [PEs table](./capabilityhost-rbac-dns.md#why-so-many-private-endpoints) 
 
 ---
 
-## 3. Why `authType: AAD`, not `ProjectManagedIdentity`?
+## 4. Why `authType: AAD`, not `ProjectManagedIdentity`?
 
 When you create the Cosmos / Storage / Search connections on the project, the connection resource has an `authType` property. The natural-sounding choice for a managed-identity-based deployment is `ProjectManagedIdentity` — and it deploys cleanly. It looks right. It is wrong.
 

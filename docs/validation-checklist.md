@@ -144,15 +144,18 @@ az storage account show -n "$STORAGE" -g "$RG" --query publicNetworkAccess -o ts
 
 All four must be `Disabled`. If any returns `Enabled`, the resource is leaking to the public internet and the rest of the validation is meaningless.
 
-### Check 3 — Managed VNet outbound rules exist (Managed VNet only)
+### Check 3 — Managed network injections / outbound rules (Managed VNet only)
 
 ```bash
-az resource show \
-  --ids "/subscriptions/<sub>/resourceGroups/$RG/providers/Microsoft.CognitiveServices/accounts/$ACCT/networkSecurityPerimeterConfigurations" \
-  --query "value[].properties.privateEndpoints[].properties.privateLinkServiceConnectionState.status"
+SUB=$(az account show --query id -o tsv)
+az rest --method get \
+  --url "https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.CognitiveServices/accounts/$ACCT?api-version=2025-10-01-preview" \
+  --query "properties.networkInjections"
 ```
 
-You should see at least 3 managed PEs, all `Approved` (one each for Cosmos, Storage, Search). If they are `Pending`, the Foundry account MI is missing the **Azure AI Enterprise Network Connection Approver** role on the resource group.
+This returns the **`networkInjections`** block, which is how Foundry's managed VNet describes the outbound private endpoints it created on your behalf to reach Cosmos / Storage / Search. You should see at least 3 entries, one for each BYO data resource, with `provisioningState: Succeeded`.
+
+If `networkInjections` is `null` or missing the expected entries, the Foundry account MI is most likely missing the **Azure AI Enterprise Network Connection Approver** role on the resource group — without that role, the managed PEs cannot be auto-approved and they never become operational. Fix the role assignment and re-run `azd provision`.
 
 ### Check 4 — capabilityHost is bound to all 3 connections
 
@@ -162,7 +165,7 @@ az rest --method get \
   --query "properties.{thread:threadStorageConnections, store:storageConnections, vector:vectorStoreConnections}"
 ```
 
-All three arrays must be non-empty. If any is empty or the resource is `404 NotFound`, the agent runtime has no idea which BYO resources to use — runtime calls will fail with `Invalid endpoint or connection failed` regardless of how healthy everything else looks. See [Design rationale: what happens if you skip capabilityHost](./design-rationale.md#what-happens-if-you-skip-capabilityhost).
+All three arrays must be non-empty. If any is empty or the resource is `404 NotFound`, the agent runtime has no idea which BYO resources to use — runtime calls will fail with `Invalid endpoint or connection failed` regardless of how healthy everything else looks. See [Design rationale: what happens if you skip capabilityHost](./design-rationale.md#2-what-happens-if-you-skip-capabilityhost).
 
 ### Check 5 — connections use the correct auth type
 
@@ -228,7 +231,7 @@ If it returns `completed`, you have proven the full chain works: private DNS →
 
 ---
 
-
+## Failure patterns to watch for
 
 These are the most common patterns during validation:
 
