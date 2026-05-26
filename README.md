@@ -55,22 +55,22 @@ Use this when agent compute must run inside the customer VNet.
 - Pattern: BYO VNet + delegated subnet (agent runtime inside the customer VNet) + Data Proxy
 - Use this for highly regulated environments, IP allow-listing scenarios, or customer-owned traffic visibility
 
-## Architecture
+## Docs
 
-See the architecture pages for side-by-side visuals and deeper explanation.
+Read these roughly in this order — visual context first, then the design reasoning, then the operational detail.
 
-- [Managed VNet architecture](./docs/architecture-diagrams/managed-vnet.md)
-- [BYO VNet architecture](./docs/architecture-diagrams/byo-vnet.md)
-- [Side-by-side comparison](./docs/architecture-diagrams/side-by-side.md)
+**Architecture:**
+1. [Side-by-side comparison](./docs/architecture-diagrams/side-by-side.md) — start here for the visual difference between Managed and BYO
+2. [Managed VNet architecture](./docs/architecture-diagrams/managed-vnet.md)
+3. [BYO VNet architecture](./docs/architecture-diagrams/byo-vnet.md)
 
-## Deep docs
+**Design and implementation detail (shared across both flavors):**
 
-Use these for implementation detail that is shared across both repos:
-
-- [Shared data plane](./docs/shared-data-plane.md)
-- [capabilityHost, RBAC, and DNS](./docs/capabilityhost-rbac-dns.md)
-- [Validation checklist](./docs/validation-checklist.md)
-- [Known limitations](./docs/known-limitations.md)
+4. [Design rationale](./docs/design-rationale.md) — the four "why" questions: full BYO triple, what happens if you skip `capabilityHost`, dual PE paths, `authType: AAD`
+5. [Shared data plane](./docs/shared-data-plane.md) — what Cosmos, Storage, AI Search are used for
+6. [capabilityHost, RBAC, and DNS](./docs/capabilityhost-rbac-dns.md) — concrete tables: 7 PEs, 6 DNS zones, two-phase RBAC
+7. [Validation checklist](./docs/validation-checklist.md) — 7 copy-paste CLI checks plus prose validation flow
+8. [Known limitations](./docs/known-limitations.md) — named issues you will hit (`azd down` SDK bug, `CustomDomainInUse` 48h soft-delete, region capacity)
 
 ## Why this repo family exists
 
