@@ -140,7 +140,7 @@ This pattern is usually the right fit when:
 
 - compliance requires agent compute inside the customer VNet
 - security teams need customer-visible flow and IP placement
-- Hosted agents or Prompt agents are part of the scenario
+- the agent runtime path must be auditable in customer-owned controls
 - downstream systems rely on explicit customer-owned network controls
 
 ## Capacity and subnet planning

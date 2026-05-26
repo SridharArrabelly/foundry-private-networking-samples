@@ -130,7 +130,7 @@ This pattern is usually the right fit when:
 
 - you need private access to the data layer
 - you do not need agent compute inside the customer VNet
-- you do not need Hosted agents
+- agent runtime traffic does not need to be audited from customer-owned controls
 - you want the lower operational complexity option
 
 ## Common misunderstandings

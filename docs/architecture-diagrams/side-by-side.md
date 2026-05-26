@@ -94,7 +94,7 @@ Use **BYO VNet** if any of these are true:
 
 - agent compute must live inside the customer VNet
 - security teams require customer-visible network flows
-- Hosted agents or Prompt agents are required in this pattern
+- the agent runtime path must be auditable in customer-owned controls
 - downstream systems depend on explicit customer-owned network controls
 
 Use **Managed VNet** if:

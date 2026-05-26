@@ -10,7 +10,6 @@ Use this repo as the **decision hub**. Start here, choose the right flavor for y
 |---|---|---|
 | Agent compute location | Microsoft-managed VNet | Your VNet, in a delegated subnet |
 | Best for | Most production workloads | Highly regulated workloads that require agent IPs inside the customer VNet |
-| Agent types | Standard Agent | Hosted agents and Prompt agents |
 | Network planning | Simpler, no subnet sizing | Requires delegated subnet and IP planning |
 | Audit visibility | Lower, compute is Microsoft-managed | Higher, flows and IPs are visible in your VNet controls |
 | Operational complexity | Lower | Higher |
@@ -21,11 +20,12 @@ Walk through these in order. Stop at the first **Yes**.
 
 1. **Do you need agent compute to live inside the customer VNet?** If yes, choose **BYO VNet**.
 2. **Do you need agent traffic to be visible in the customer's NSG or firewall logs?** If yes, choose **BYO VNet**.
-3. **Do you need Hosted agents or custom container images?** If yes, choose **BYO VNet**.
-4. **Do downstream systems need explicit agent IP allow-listing?** If yes, choose **BYO VNet**.
-5. **Do you want the simplest private setup with the fewest moving parts?** If yes, choose **Managed VNet**.
+3. **Do downstream systems need explicit agent IP allow-listing or customer-owned network controls?** If yes, choose **BYO VNet**.
+4. **Do you want the simplest private setup with the fewest moving parts?** If yes, choose **Managed VNet**.
 
-If none of the first four apply, start with **Managed VNet**.
+If none of the first three apply, start with **Managed VNet**.
+
+> **Note on agent types.** Both Managed VNet and BYO VNet now support Prompt and Hosted Agent services in the current Foundry portal. Choose between the two flavors based on **runtime placement, auditability, and customer network control** — not on agent type.
 
 ## What is shared across both samples?
 
@@ -45,14 +45,14 @@ See [Shared data plane](./docs/shared-data-plane.md) for the full picture.
 Recommended starting point for most private-networking scenarios.
 
 - Repo: [foundry-private-managed-vnet](https://github.com/SridharArrabelly/foundry-private-managed-vnet)
-- Pattern: Managed VNet + Standard Agent + capabilityHost
+- Pattern: Managed VNet + Microsoft-managed agent runtime + capabilityHost
 - Use this when private data access is required, but you do not need agent compute inside your own VNet
 
 ### BYO VNet
 Use this when agent compute must run inside the customer VNet.
 
 - Repo: [foundry-private-byo-vnet](https://github.com/SridharArrabelly/foundry-private-byo-vnet)
-- Pattern: BYO VNet + delegated subnet + Data Proxy + Hosted/Prompt agents
+- Pattern: BYO VNet + delegated subnet (agent runtime inside the customer VNet) + Data Proxy
 - Use this for highly regulated environments, IP allow-listing scenarios, or customer-owned traffic visibility
 
 ## Architecture
