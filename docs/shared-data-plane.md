@@ -9,22 +9,14 @@ That is true whether you choose:
 
 The network path is different between the two flavors, but the data plane is intentionally the same.
 
-## What is shared across both samples
+## What stays the same in both samples
 
-Both samples use these customer-owned resources:
+In both patterns:
 
-- **Azure Cosmos DB** — thread state and agent conversation state
-- **Azure Storage** — file uploads and agent-related storage paths
-- **Azure AI Search** — retrieval and vector-backed search scenarios
-
-Both samples also use:
-
-- **Azure AI Foundry account and project**
-- **capabilityHost** — binds the BYO data resources to the project / agent runtime
-- **Private networking** — the goal is private access to the data resources without relying on public endpoints
-- **Role-based access control** — the project and related identities must have the right permissions on the data resources
-
-## Why the shared data plane matters
+- The data resources are **customer-owned**
+- The Foundry project must be able to reach them privately
+- The identities involved must receive the right RBAC assignments
+- `capabilityHost` is the binding mechanism that tells Foundry which resources to use
 
 This is one of the most useful design choices in the repo family. It means:
 

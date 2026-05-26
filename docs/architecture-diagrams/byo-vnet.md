@@ -16,7 +16,7 @@ flowchart TB
       PEs["5 Private Endpoints<br/>Foundry · Search · Cosmos · Blob · AMPLS"]:::pe
     end
     subgraph SNET_AGENT["snet-agent (10.0.4.0/24, delegated to Microsoft.App/environments)"]
-      AGENT["Agent runtime<br/>Data Proxy · Hosted / Prompt MicroVMs"]:::yours
+      AGENT["Agent runtime<br/>Data Proxy + MicroVMs"]:::yours
     end
     subgraph SNET_VM["snet-vm + AzureBastionSubnet"]
       VM["Jumpbox + Bastion + NAT GW"]:::yours
