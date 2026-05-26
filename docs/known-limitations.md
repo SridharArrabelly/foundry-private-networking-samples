@@ -76,6 +76,57 @@ The Bastion subnet **must** be named `AzureBastionSubnet` and **must** be at lea
 
 The Windows jumpbox runs **PowerShell 5.1** by default. Scripts copied from a dev machine that use `?.` (null-conditional), `??` (null-coalescing), or ternary `a ? b : c` will fail to parse. Either install PowerShell 7 on the jumpbox first, or use 5.1-compatible syntax.
 
+### 8. File Search returns generic 500 in Playground after project recreate
+
+**Symptom:** The AI Search tool works normally in agents, but the Playground **File Search** tool fails with:
+
+```
+The server had an error processing your request. Sorry about that!
+```
+
+The vector store appears to be created, the dataset gets registered under **Data → Datasets**, and the AI Search index returns results when queried directly. Only the agent's File Search call fails. The same agent works fine in a non-private / non-BYO setup.
+
+**Cause (most likely):** After an `azd down` → `azd up` cycle, the Foundry project is recreated with a **new system-assigned managed identity**. The pre-caphost and post-caphost role assignments are named via `guid(projectPrincipalId, …)` in Bicep, which produces a name tied to the **old** principal. After redeploy:
+
+- Old role assignments persist on the agent Storage account, pointing at an **orphaned** principal (the deleted project MI).
+- Depending on partial-failure paths, the new MI may not receive a fresh `Storage Blob Data Contributor` + `Storage Blob Data Owner` (ABAC) assignment on the agent Storage account.
+- File Search reads/writes chunked content into the agent Storage account; without those Storage roles on the **current** project MI, the post-retrieval step fails inside the service and surfaces to the client as a generic `500`.
+
+The AI Search tool keeps working because it uses a different role chain (Search-side roles, which survive the recreate) and does not depend on the agent Storage container.
+
+**How to confirm:**
+
+```bash
+# Current project MI principalId
+PROJ_MI=$(az resource show \
+  --ids "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<acct>/projects/<proj>" \
+  --query identity.principalId -o tsv)
+
+# Who actually has Storage Blob roles on the agent Storage account?
+STORAGE_ID=$(az storage account show -n <agent-storage> -g <rg> --query id -o tsv)
+az role assignment list --scope "$STORAGE_ID" \
+  --query "[?contains(roleDefinitionName,'Storage Blob')].{role:roleDefinitionName, principalId:principalId}" \
+  -o table
+```
+
+If the listed `principalId`s do not match `$PROJ_MI`, the existing assignments are pointing at the orphaned identity and the current MI has no Storage access.
+
+**Workaround:**
+
+```bash
+az role assignment create --assignee-object-id $PROJ_MI \
+  --assignee-principal-type ServicePrincipal \
+  --role "Storage Blob Data Contributor" --scope "$STORAGE_ID"
+
+az role assignment create --assignee-object-id $PROJ_MI \
+  --assignee-principal-type ServicePrincipal \
+  --role "Storage Blob Data Owner" --scope "$STORAGE_ID"
+```
+
+Then delete the failed vector store in the portal and re-upload the document. Cleaning up the orphaned assignments is optional but recommended for tidiness.
+
+> **Under investigation.** This is the most likely root cause based on the observed RBAC state in a reproducing deployment, but end-to-end confirmation that granting the roles fully unblocks the `500` is still pending. Treat the workaround as a starting point, not a guaranteed fix. Track this section for updates.
+
 ## Repo-family-wide caveats
 
 These apply to both samples.

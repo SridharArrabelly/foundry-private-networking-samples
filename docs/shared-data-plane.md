@@ -53,15 +53,6 @@ Typical responsibilities:
 - retrieval-augmented lookup
 - vector-backed search scenarios
 
-## What stays the same in both samples
-
-In both patterns:
-
-- The data resources are **customer-owned**
-- The Foundry project must be able to reach them privately
-- The identities involved must receive the right RBAC assignments
-- `capabilityHost` is the binding mechanism that tells Foundry which resources to use
-
 ## What changes between the two samples
 
 The data plane stays the same. The network path changes.

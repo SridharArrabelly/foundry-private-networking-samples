@@ -174,7 +174,7 @@ az cognitiveservices account connection list -n "$ACCT" -g "$RG" \
   --query "[].{name:name, target:properties.target, authType:properties.authType}" -o table
 ```
 
-The Cosmos, Storage, and Search connections must show `authType: AAD`. If you see `ProjectManagedIdentity`, the connection was created with a value that looks correct but is not supported by capabilityHost — see [Design rationale: why authType AAD](./design-rationale.md#why-authtype-aad-not-projectmanagedidentity).
+The Cosmos, Storage, and Search connections must show `authType: AAD`. If you see `ProjectManagedIdentity`, the connection was created with a value that looks correct but is not supported by capabilityHost — see [Design rationale: why authType AAD](./design-rationale.md#4-why-authtype-aad-not-projectmanagedidentity).
 
 Application Insights, if you added it, will show `ApiKey` — that is correct.
 

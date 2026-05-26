@@ -105,6 +105,8 @@ Typical signs of RBAC problems:
 - Cosmos-based state persistence fails
 - post-provision steps succeed intermittently or only after rerunning
 
+> **After an `azd down` → `azd up` cycle**, role assignments can end up pointing at an **orphaned project managed identity** (the one from the previous deploy). Symptom: AI Search tool works, but Playground File Search returns a generic `500`. See [Known limitations → File Search 500 after project recreate](./known-limitations.md#8-file-search-returns-generic-500-in-playground-after-project-recreate).
+
 ## Private endpoint readiness
 
 A private endpoint is not useful just because it exists. Before treating it as live, confirm:

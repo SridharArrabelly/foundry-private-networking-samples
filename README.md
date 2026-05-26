@@ -29,15 +29,7 @@ If none of the first three apply, start with **Managed VNet**.
 
 ## What is shared across both samples?
 
-Both samples share the same private data-layer pattern:
-
-- BYO **Cosmos DB** for thread state
-- BYO **Storage** for files and agent directories
-- BYO **AI Search** for retrieval / vector store
-- **capabilityHost** binds those resources to the agent runtime
-- The templates are **azd-deployable**
-
-See [Shared data plane](./docs/shared-data-plane.md) for the full picture.
+Both samples share the same private BYO data-layer pattern — Cosmos DB (thread state), Storage (files), and AI Search (retrieval / vector store), bound to the agent runtime via `capabilityHost` and deployed end-to-end with `azd`. See [Shared data plane](./docs/shared-data-plane.md) for the full picture.
 
 ## Repos
 
