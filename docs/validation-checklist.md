@@ -162,7 +162,7 @@ What you expect depends on the sample flavor:
 
 ```bash
 az rest --method get \
-  --url "https://management.azure.com/subscriptions/<sub>/resourceGroups/$RG/providers/Microsoft.CognitiveServices/accounts/$ACCT/projects/$PROJ/capabilityHosts/caphostproj?api-version=2025-10-01-preview" \
+  --url "https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.CognitiveServices/accounts/$ACCT/projects/$PROJ/capabilityHosts/caphostproj?api-version=2025-10-01-preview" \
   --query "properties.{thread:threadStorageConnections, store:storageConnections, vector:vectorStoreConnections}"
 ```
 

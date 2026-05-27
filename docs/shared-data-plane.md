@@ -85,18 +85,6 @@ Think about the repo family in two layers:
 
 That separation is deliberate. It makes the comparison easier and keeps the architecture easier to reason about.
 
-## Recommended way to read the docs
-
-If you are new to the repo family:
-
-1. Read the parent README first
-2. Pick the network flavor
-3. Come back to this page to understand what the two samples share
-4. Then read:
-   - [capabilityHost, RBAC, and DNS](./capabilityhost-rbac-dns.md)
-   - [Validation checklist](./validation-checklist.md)
-   - [Known limitations](./known-limitations.md)
-
 ## Related docs
 
 - [capabilityHost, RBAC, and DNS](./capabilityhost-rbac-dns.md)
