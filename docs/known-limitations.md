@@ -127,6 +127,47 @@ Then delete the failed vector store in the portal and re-upload the document. Cl
 
 > **Under investigation.** This is the most likely root cause based on the observed RBAC state in a reproducing deployment, but end-to-end confirmation that granting the roles fully unblocks the `500` is still pending. Treat the workaround as a starting point, not a guaranteed fix. Track this section for updates.
 
+### 9. Resource group delete leaves orphan VNet, NSGs, NAT gateway and Public IP
+
+**Symptom:** after running `azd down`, or deleting the resource group from the portal, these resources refuse to delete and stay behind:
+
+- `vnet-<prefix>` (and all four subnets)
+- `vnet-<prefix>-snet-…-nsg-…` (all four NSGs)
+- `natgw-<prefix>` + `pip-<prefix>-natgw`
+
+The activity log on the failed RG delete shows:
+
+```
+InUseSubnetCannotBeDeleted
+  Subnet snet-<prefix>-agent is in use by …/serviceAssociationLinks/legionservicelink
+  and cannot be deleted.
+```
+
+**Cause:** the Foundry project's `capabilityHost` (kind `Agents`) provisions a Microsoft-managed Container Apps environment **in an internal subscription you cannot see**. That managed env attaches a `legionservicelink` *serviceAssociationLink* (SAL) to your agent subnet. If the Foundry account is deleted while the `capabilityHost` still exists (which is what happens when you delete the RG straight from the portal, or when `azd down` removes the account before tearing the capabilityHost down), the managed env is left **orphaned in the internal subscription** with no API surface for you to clean it up. The SAL on your subnet survives, and from then on nothing in the agent subnet — or anything that depends on it — can be deleted.
+
+You can verify the SAL is the blocker with:
+
+```bash
+az network vnet subnet show \
+  -g <rg> --vnet-name vnet-<prefix> -n snet-<prefix>-agent \
+  --query "serviceAssociationLinks"
+```
+
+If `linkedResourceType` is `Microsoft.App/environments` and `allowDelete` is `false`, you have hit this issue. Patching `allowDelete` from your own tenant does **not** work — only the owning RP can flip it.
+
+**Prevention (already wired into both samples):** the `predown` hook in `azure.yaml` deletes the `capabilityHost` **before** azd tears down the Foundry account, which lets the managed env (and its SAL) cascade away cleanly. Make sure you use `azd down` rather than deleting the RG from the portal.
+
+**Recovery if you already hit it:**
+
+1. Try purging the soft-deleted Foundry account first — sometimes this is enough on its own:
+   ```bash
+   az cognitiveservices account list-deleted --query "[?name=='<acct>']" -o table
+   az cognitiveservices account purge -l <region> -g <rg> -n <acct>
+   ```
+   Re-attempt `az group delete -n <rg> --yes`. If the SAL is still there after the purge, continue.
+2. **Open an Azure support ticket** referencing the orphan `Microsoft.App/environments` in the internal subscription. Microsoft has to delete it from their side. This is the only fully reliable path once the SAL is orphaned.
+3. Leave the residual resources running while you wait — NAT gateway + public IP are small (~$1.20/day combined per RG); NSGs and the empty VNet are free.
+
 ## Repo-family-wide caveats
 
 These apply to both samples.
