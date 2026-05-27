@@ -206,6 +206,8 @@ returns a private IP, and that the **4 monitor zones** are linked to your VNet: 
 
 ### Check 7 — end-to-end agent smoke test
 
+> **Prerequisite:** Check 7 runs Python on the jumpbox. `azd up` does **not** install Python — run `./scripts/bootstrap-jumpbox.{ps1,sh}` from your dev box first (see the "Optional: populate sample data + bootstrap the jumpbox" section of either child sample's README). That script installs Python 3.12 on the jumpbox and pre-fetches the project's requirements. The smoke test below does **not** depend on the AI Search index being populated — it only validates the agent + capabilityHost + connections chain.
+
 From the jumpbox:
 
 ```bash
