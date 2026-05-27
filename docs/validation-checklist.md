@@ -144,7 +144,7 @@ az storage account show -n "$STORAGE" -g "$RG" --query publicNetworkAccess -o ts
 
 All four must be `Disabled`. If any returns `Enabled`, the resource is leaking to the public internet and the rest of the validation is meaningless.
 
-### Check 3 — Managed network injections / outbound rules (Managed VNet only)
+### Check 3 — `networkInjections` reflects the agent runtime model
 
 ```bash
 SUB=$(az account show --query id -o tsv)
@@ -153,15 +153,16 @@ az rest --method get \
   --query "properties.networkInjections"
 ```
 
-This returns the **`networkInjections`** block, which is how Foundry's managed VNet describes the outbound private endpoints it created on your behalf to reach Cosmos / Storage / Search. You should see at least 3 entries, one for each BYO data resource, with `provisioningState: Succeeded`.
+What you expect depends on the sample flavor:
 
-If `networkInjections` is `null` or missing the expected entries, the Foundry account MI is most likely missing the **Azure AI Enterprise Network Connection Approver** role on the resource group — without that role, the managed PEs cannot be auto-approved and they never become operational. Fix the role assignment and re-run `azd provision`.
+- **Managed VNet** — expect one entry with `scenario: agent`, `useMicrosoftManagedNetwork: true`, and the managed PEs visible under `properties.networkInjections` and the `managednetworks/default` child (Cosmos / Storage / Search). If the managed PEs are missing or stuck `Pending`, the Foundry account MI is most likely missing the **Azure AI Enterprise Network Connection Approver** role on the resource group — without that role, the managed PEs cannot be auto-approved and they never become operational. Fix the role assignment and re-run `azd provision`.
+- **BYO VNet** — expect one entry with `scenario: agent`, `useMicrosoftManagedNetwork: false`, and `subnetArmId` pointing to your delegated `snet-…-agent` subnet. There are no managed PEs in this flavor — the agent runtime reuses your own PEs.
 
 ### Check 4 — capabilityHost is bound to all 3 connections
 
 ```bash
 az rest --method get \
-  --url "https://management.azure.com/subscriptions/<sub>/resourceGroups/$RG/providers/Microsoft.CognitiveServices/accounts/$ACCT/projects/$PROJ/capabilityHosts/default?api-version=2025-04-01-preview" \
+  --url "https://management.azure.com/subscriptions/<sub>/resourceGroups/$RG/providers/Microsoft.CognitiveServices/accounts/$ACCT/projects/$PROJ/capabilityHosts/caphostproj?api-version=2025-10-01-preview" \
   --query "properties.{thread:threadStorageConnections, store:storageConnections, vector:vectorStoreConnections}"
 ```
 
@@ -201,7 +202,7 @@ If you deployed AMPLS, also confirm:
 nslookup <ampls-name>.monitor.azure.com
 ```
 
-returns a private IP, and that the **6 monitor zones** are linked to your VNet: `privatelink.monitor.azure.com`, `privatelink.oms.opinsights.azure.com`, `privatelink.ods.opinsights.azure.com`, `privatelink.agentsvc.azure-automation.net`, `privatelink.blob.core.windows.net`, `privatelink.applicationinsights.azure.com`.
+returns a private IP, and that the **4 monitor zones** are linked to your VNet: `privatelink.monitor.azure.com`, `privatelink.oms.opinsights.azure.com`, `privatelink.ods.opinsights.azure.com`, `privatelink.agentsvc.azure-automation.net`. The AMPLS also reuses the existing `privatelink.blob.<storage-suffix>` zone for Log Analytics ingestion blobs — that zone is created by `private-endpoints.bicep`, not by `observability.bicep`.
 
 ### Check 7 — end-to-end agent smoke test
 
@@ -217,7 +218,7 @@ from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
 c = AIProjectClient(endpoint="https://<acct>.services.ai.azure.com/api/projects/<proj>",
                     credential=DefaultAzureCredential())
-agent = c.agents.create_agent(model="gpt-4o-mini", name="smoke", instructions="be brief")
+agent = c.agents.create_agent(model="gpt-4.1-mini", name="smoke", instructions="be brief")
 thread = c.agents.threads.create()
 c.agents.messages.create(thread_id=thread.id, role="user", content="say hi")
 run = c.agents.runs.create_and_process(thread_id=thread.id, agent_id=agent.id)

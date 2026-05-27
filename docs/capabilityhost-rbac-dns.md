@@ -48,6 +48,7 @@ A private Foundry deployment ends up with **two layers of PEs** to the same back
 | `pep-…-search`   | Your `snet-pe` | You, jumpbox (indexer) | Create/update Search indexes, query from your own apps |
 | `pep-…-cosmos`   | Your `snet-pe` | You, future apps | Manage Cosmos from inside the VNet |
 | `pep-…-blob`     | Your `snet-pe` | You, future apps | Upload files to Storage from inside the VNet |
+| `pep-…-ampls`    | Your `snet-pe` | App Insights + Log Analytics agents | Private ingestion / query path for telemetry — without this, an agent in a no-egress subnet cannot send telemetry to App Insights |
 | Managed PE → Cosmos  | MS-managed VNet | Agent runtime | Agent writes thread state |
 | Managed PE → Storage | MS-managed VNet | Agent runtime | Agent uploads/reads agent-scoped files |
 | Managed PE → Search  | MS-managed VNet | Agent runtime | Agent calls the AI Search tool / file-search vector stores |
@@ -67,9 +68,13 @@ A private endpoint is just a private IP — clients still need DNS to resolve th
 | `privatelink.services.ai.azure.com` | Foundry Agents / Threads APIs | Agents UI calls `<acct>.services.ai.azure.com` |
 | `privatelink.search.windows.net` | AI Search | Indexer + agent tool call `<svc>.search.windows.net` |
 | `privatelink.documents.azure.com` | Cosmos NoSQL | Cosmos SDK calls `<acct>.documents.azure.com` |
-| `privatelink.blob.core.windows.net` | Storage blob | Storage SDK calls `<acct>.blob.core.windows.net` |
+| `privatelink.blob.core.windows.net` | Storage blob (and reused by AMPLS for Log Analytics ingestion blobs) | Storage SDK calls `<acct>.blob.core.windows.net` |
+| `privatelink.monitor.azure.com` | AMPLS — ingestion + query for Azure Monitor | App Insights / agent telemetry path through AMPLS |
+| `privatelink.oms.opinsights.azure.com` | Log Analytics workspace endpoint | Log Analytics agents and ingestion |
+| `privatelink.ods.opinsights.azure.com` | Log Analytics OMS endpoint | Log Analytics agents (heartbeat / ingestion) |
+| `privatelink.agentsvc.azure-automation.net` | OMS agent management endpoint | Log Analytics / monitoring agents control-plane traffic |
 
-All six are linked to your VNet so anything inside (the jumpbox, the agent runtime's managed PEs, your future apps) resolves these hostnames to the corresponding PE IP automatically.
+All ten are linked to your VNet so anything inside (the jumpbox, the agent runtime's managed PEs, your future apps) resolves these hostnames to the corresponding PE IP automatically. The four monitor zones above are only created when observability is deployed (it is enabled by default in both samples).
 
 ## RBAC in two phases
 

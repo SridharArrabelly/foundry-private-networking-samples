@@ -15,7 +15,7 @@ The answer is **no, and the reason is `capabilityHost`**.
 `capabilityHost` is a single resource that binds **three** connection arrays on the project:
 
 ```
-project / capabilityHosts / default
+project / capabilityHosts / caphostproj
    ├─ threadStorageConnections = [ → your Cosmos connection  ]
    ├─ storageConnections       = [ → your Storage connection ]
    └─ vectorStoreConnections   = [ → your AI Search connection ]

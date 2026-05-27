@@ -13,7 +13,7 @@ flowchart TB
   subgraph YOUR["🟦 Your VNet — 10.0.0.0/16"]
     direction TB
     subgraph SNET_PE["snet-pe (10.0.1.0/24)"]
-      PEs["4 PEs (yours)<br/>Foundry · Cosmos · Storage · Search"]:::pe
+      PEs["5 PEs (yours)<br/>Foundry · Cosmos · Storage · Search · AMPLS"]:::pe
     end
     subgraph SNET_VM["snet-vm + AzureBastion"]
       VM["Jumpbox + Bastion + NAT GW"]:::yours
