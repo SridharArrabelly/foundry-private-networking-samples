@@ -74,7 +74,24 @@ The Bastion subnet **must** be named `AzureBastionSubnet` and **must** be at lea
 
 ### 7. Jumpbox PowerShell version
 
-The Windows jumpbox runs **PowerShell 5.1** by default. Scripts copied from a dev machine that use `?.` (null-conditional), `??` (null-coalescing), or ternary `a ? b : c` will fail to parse. Either install PowerShell 7 on the jumpbox first, or use 5.1-compatible syntax.
+The Windows jumpbox runs **PowerShell 5.1** by default. Scripts copied from a dev machine that use `?.` (null-conditional), `??` (null-coalescing), or ternary `a ? b : c` will fail to parse. Either install PowerShell 7 on the jumpbox first, or use 5.1-compatible syntax — `scripts/jumpbox-bootstrap.ps1` in both samples is intentionally PS 5.1-compatible.
+
+### 7a. Jumpbox image — Windows Server 2022 Azure Edition (not Windows 11)
+
+Both samples deploy `MicrosoftWindowsServer / WindowsServer / 2022-datacenter-azure-edition` for the jumpbox instead of a Windows 11 desktop image. Reasons:
+
+- **No multi-tenant entitlement requirement.** Windows 11 desktop images on Azure VMs require a per-user EA entitlement (Win 10/11 Enterprise E3/E5, Win VDA, or M365 F3/E3/E5). Server-with-Desktop-Experience uses standard per-vCPU PAYG licensing — works in any subscription, no entitlement gymnastics.
+- **Stable VM-agent lifecycle.** During earlier testing, the Win 11 image showed the **"VM agent stuck after deallocation"** symptom (the VM would start back up but `az vm run-command invoke` and Bastion would silently fail until a full delete/redeploy). The Server SKU is designed for the Azure-fabric restart lifecycle and does not exhibit this.
+
+**Trade-off:** Edge / Chrome are not pre-installed on Server with Desktop Experience. If you Bastion in and need a browser (e.g. to open the Foundry portal), run once:
+
+```powershell
+$msi = "$env:TEMP\edge.msi"
+Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/?linkid=2093437' -OutFile $msi -UseBasicParsing
+Start-Process msiexec.exe -ArgumentList '/i', $msi, '/qn' -Wait
+```
+
+The validation checklist itself (CLI + Python smoke test) needs no browser — Python and the Az CLI are installed by `scripts/jumpbox-bootstrap.ps1` during `azd up`.
 
 ### 8. File Search returns generic 500 in Playground after project recreate
 
