@@ -194,9 +194,14 @@ nslookup $env:STORAGE.blob.core.windows.net
 
 All six should return **private IPs** in your VNet's PE subnet range (typically `10.x.x.x`), not public IPs. If a name returns a public IP, the corresponding `privatelink.*` zone is missing or not linked to your VNet. See the [DNS zones table](./capabilityhost-rbac-dns.md#private-dns-zones).
 
+> **No-jumpbox deployments (`DEPLOY_JUMPBOX=false`):** this check can't run from your dev box — `nslookup` from outside the VNet always returns the public IP regardless of how the private endpoints are configured. The substitutes:
+> - Use Network Watcher's "Effective routes" + private endpoint resource status on the VNet to confirm the PEs are `Approved` and the DNS zone records exist.
+> - Or temporarily deploy the jumpbox (`azd env set DEPLOY_JUMPBOX true && azd provision`) to run this check, then remove it again.
+> - Or skip Check 6 and rely on Check 7 succeeding from a VM with VNet access — a successful smoke test implies private DNS is resolving correctly.
+
 **Check 6b — observability private resolution**
 
-If you deployed AMPLS, also confirm:
+If you deployed AMPLS (i.e. `DEPLOY_OBSERVABILITY=true`, the default), also confirm:
 
 ```powershell
 nslookup <ampls-name>.monitor.azure.com
