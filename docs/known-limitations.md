@@ -185,6 +185,46 @@ If `linkedResourceType` is `Microsoft.App/environments` and `allowDelete` is `fa
 2. **Open an Azure support ticket** referencing the orphan `Microsoft.App/environments` in the internal subscription. Microsoft has to delete it from their side. This is the only fully reliable path once the SAL is orphaned.
 3. Leave the residual resources running while you wait — NAT gateway + public IP are small (~$1.20/day combined per RG); NSGs and the empty VNet are free.
 
+### 10. RFC 1918 only — CGNAT and reserved ranges fail at capabilityHost create
+
+**Symptom:** every resource (Foundry account, Cosmos, Storage, AI Search) deploys cleanly. The `capabilityHost` creation step then fails with:
+
+```
+The environment network configuration is invalid: Address space of virtual network
+<vnet-id> cannot overlap with reserved IP ranges … 100.64.0.0/11
+```
+
+**Cause:** the agent runtime is hosted by an Azure Container Apps environment. ACA explicitly rejects VNet address spaces that overlap **CGNAT (RFC 6598)** or other Azure-reserved ranges. This rule is enforced by ACA, not by Foundry, and only triggers at `capabilityHost` create — so the deployment looks healthy up to that point.
+
+**Applies to:** BYO VNet (this VNet is yours, you pick the address space). Managed VNet is less exposed because the agent's compute lives in a Microsoft-managed VNet whose address space Microsoft controls — but the customer VNet hosting your private endpoints still needs to be a valid Azure address space.
+
+**Use RFC 1918 only:**
+
+- `10.0.0.0/8`
+- `172.16.0.0/12`
+- `192.168.0.0/16`
+
+**Address ranges that are explicitly blocked:**
+
+| Range | Reason |
+|---|---|
+| `0.0.0.0/8` | "This Network" (RFC 1122) |
+| `127.0.0.0/8` | Loopback (RFC 1122) |
+| `169.254.0.0/16` | Link-Local (RFC 3927) |
+| `172.30.0.0/16` | Azure internal use |
+| `172.31.0.0/16` | Azure internal use |
+| `192.0.2.0/24` | TEST-NET / Documentation (RFC 5737) |
+| `100.64.0.0/11` | CGNAT / Shared Address Space (subset of RFC 6598) |
+| `100.100.0.0/17` | Azure internal use |
+| `100.100.192.0/19` | Azure internal use |
+| `100.100.224.0/19` | Azure internal use |
+
+The full RFC 6598 range is `100.64.0.0/10`. Azure only blocks the lower `/11` today, but avoid the full `/10` to stay forward-compatible.
+
+**Lesson learned:** treat **capabilityHost success** — not Foundry account success — as your "deploy worked" gate. Partial deploys that fail at caphost are not worth repairing; recreate the stack greenfield in an RFC 1918 VNet.
+
+**Reference:** [Microsoft Learn — Foundry Agent Service: Virtual Networks (Known Limitations)](https://learn.microsoft.com/en-us/azure/foundry/agents/how-to/virtual-networks). The ranges above were confirmed in a real customer deployment hitting this exact failure on a CGNAT VNet.
+
 ## Repo-family-wide caveats
 
 These apply to both samples.
